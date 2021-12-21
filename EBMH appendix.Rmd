@@ -1,0 +1,207 @@
+---
+title: Dose-effect meta-analysis for psychopharmacologic interventions using randomized data - Appendix
+author: "Tasnim Hamza"
+date: "5/7/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Dose-effect meta-analysis
+
+```{r cars, echo=TRUE, warning=FALSE, message=FALSE}
+# Run dose-effect meta-analysis: 
+# 1. one-study analysis (with linear and RCS)
+# 2. multi-studies analysis: 1stage and 2stage (with RCS)
+
+library(rms) # rcs()
+library(dosresmeta) # dosresmeta()
+library(meta) # metaprop()
+library(dplyr)
+source('fun to analyze EBMH.R') # include createORreference.fun()
+
+# ---------- load data and prepare ----------
+
+# load and exclude single arm studies
+mydata <-  read.csv('DOSEmainanalysis.csv')
+antidep=mydata[mydata$exc==F,]
+
+# add OR
+antidep <- antidep%>%arrange(Study_No,hayasaka_ddd) # arrange doses per study
+antidep$studyid <- as.numeric(as.factor(antidep$Study_No))
+antidep$nonResponders <- antidep$No_randomised- antidep$Responders
+logORmat <- sapply(unique(antidep$studyid),function(i) createORreference.fun(antidep$Responders[antidep$studyid==i],antidep$No_randomised[antidep$studyid==i]),simplify = FALSE)
+logORmat <- do.call(rbind,logORmat)
+antidep$logOR <- c(logORmat[,1])
+antidep$selogOR <- c(logORmat[,2])
+
+# knots
+knots= quantile(antidep$hayasaka_ddd[antidep$hayasaka_ddd!=0],c(0.10,0.50,0.90))
+
+# ---------- 1.one-study analysis ----------
+study_87 <- antidep[antidep$Study_No=='87',] 
+
+# linear
+lin_1study <- dosresmeta(formula=logOR~hayasaka_ddd, 
+                         id=Study_No, 
+                         type=type,
+                         cases=Responders,
+                         n=No_randomised,
+                         se=selogOR,
+                         data=study_87,
+                         method = 'reml')
+
+# RCS
+rcs_1study <- dosresmeta(formula=logOR~rcs(hayasaka_ddd,knots), 
+                         id=Study_No, 
+                         type=type,
+                         cases=Responders,
+                         n=No_randomised,
+                         se=selogOR,
+                         data=study_87,
+                         method = 'reml')
+
+# ---------- 1.multi-study analysis ----------
+# 1-stage
+rcs_pooled1 <- dosresmeta(formula=logOR~rcs(hayasaka_ddd,knots), 
+                          proc="1stage",
+                          id=Study_No, 
+                          type=type,
+                          cases=Responders,
+                          n=No_randomised,
+                          se=selogOR,
+                          data=antidep,
+                          method = 'reml')
+print(waldtest(b=coef(rcs_pooled1)[2], 
+         Sigma=vcov(rcs_pooled1)[2,2],
+         Terms=1)) # wald test for spline coefficient
+# 2-stage
+# include studies with at least 3 arms
+studies_2arm <- unique(antidep$Study_No)[table(antidep$Study_No)<3]
+antidep_2stage <- antidep[!antidep$Study_No%in%studies_2arm,]
+
+rcs_pooled2 <- dosresmeta(formula=logOR~rcs(hayasaka_ddd,knots), 
+                          proc="2stage",
+                          id=Study_No, 
+                          type=type,
+                          cases=Responders,
+                          n=No_randomised,
+                          se=selogOR,
+                          data=antidep_2stage,
+                          method = 'reml')
+
+# placebo effect - meta-analysis
+antidep_p <- antidep[antidep$Drug=='placebo',]
+antidep_p <- antidep_p[!(is.na(antidep_p$Responders)|is.na(antidep_p$No_randomised)),] # discard arms with NA
+
+meta_pl<-metaprop(event=Responders, 
+                       n=No_randomised, 
+                       data=antidep_p, 
+                       studlab=Study_No,
+                       comb.fixed = FALSE)
+# back transformation: logit = log (p/(1-p)) -> probability p
+pl_eff <- exp(meta_pl$TE.random)/(1+exp(meta_pl$TE.random)) 
+
+```
+
+## Figures and tables
+```{r plot, fig.show='asis'}
+source('analyze EBMH.R')
+source('fun to plot EBMH.R')
+
+# Table 1 - data of Feighner et al study 
+tab1()
+
+# Figure 1 - OR vs flux.dose - RCS and Linear (Feighner et al study)
+plotdata1s = plotdata.fun(drma = rcs_1study,
+                         data = study_87,
+                         knots=knots) # RCS
+plotdata2s = plotdata.fun(drma = lin_1study,
+                          data = study_87,
+                          knots=knots) # Linear
+
+doseres.plot(plotdata = plotdata1s,
+              data=study_87,
+              ymax = 4.6,
+              ymin=1,
+              y='OR',
+              ub='ubo',
+              lb='lbo',
+              add2=plotdata2s) # Linear and RCS
+
+
+# Figure 2: OR vs flux.dose - RCS: 2stage & 1stage 
+plotdata1 = plotdata.fun(drma = rcs_pooled2,
+                         data = antidep,
+                         knots=knots)
+
+plotdata2 = plotdata.fun(drma = rcs_pooled1,
+                         data = antidep,
+                         knots=knots,
+                         p.eff=pl_eff)
+
+
+doseres.plot(plotdata =plotdata1,
+             data=antidep,
+             ymax = 2,
+             ymin=0.5,
+             y='OR',
+             ub='ubo',
+             lb='lbo',
+             add2=plotdata2,
+             add3=NULL) # RCS 1stage and 2stage
+
+# Figure 3: prob vs flux.dose - RCS 1stage
+doseres.plot(plotdata =plotdata2,
+             data=antidep,
+             ymax = 0.55,
+             ymin=0.3,
+             y='prob',
+             ub='ubp',
+             lb='lbp',
+             labs = c('Predicted absolute effect','Fluoxetine-equivalent dose')) # RCS 1stage 
+
+
+
+# Figure 4: VPC vs dose
+
+# VPC 
+df <- antidep[!is.na(antidep$selogOR),]
+df$vpc <- vpc(rcs_pooled1)
+min(df$vpc[df$hayasaka_ddd==20])
+max(df$vpc[df$hayasaka_ddd==20])
+max(df$vpc)
+ggplot(df, aes(hayasaka_ddd,vpc)) + 
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = 0.3, fill= "darkseagreen2", alpha=0.3)  +
+  theme_light()+
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 0.3, ymax = 0.6 , fill= "lightgoldenrod2", alpha=0.3) + 
+  theme_light()+
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 0.6, ymax = Inf, fill= "lightcoral", alpha=0.3) +
+  theme_light()+
+  geom_point() + 
+  geom_smooth(method = "loess",se=FALSE)+
+  coord_cartesian(clip="off", ylim=c(0,0.9))+
+  theme(axis.title=element_blank(),
+        plot.margin = unit(c(5,10,10,5), "mm"))
+
+ggplot(df, aes(hayasaka_ddd,vpc)) + 
+  coord_flip()+
+  geom_boxplot() + 
+ geom_jitter(shape=16, position=position_jitter(0.2))+
+  coord_cartesian(clip="off", ylim=c(0,0.9))+
+  theme(axis.title=element_blank(),
+        plot.margin = unit(c(5,10,10,5), "mm"))
+
+# Appendix figure 1
+dose_dist1()
+
+# Appendix figure 2
+dose_dist2()
+
+# Appendix table
+app.tab()
+
+```
+
