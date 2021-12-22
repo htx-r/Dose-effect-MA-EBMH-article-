@@ -1,6 +1,6 @@
 #===========================
 require(dplyr)
-
+library(wesanderson)
 # 1. Table 
 tab1 <- function(data=study_87){
   return(data.frame(
@@ -63,7 +63,7 @@ doseres.plot <- function(plotdata,
                           y='OR',
                           ub='ubo',
                           lb='lbo',
-                          col=c('steelblue4','lightblue2'),
+                          col=c("darkred","mistyrose3"),#c('grey27','gray70'),
                           labs=c('Odds Ratio (OR)','Fluoxetine-equivalent dose'),
                           linetype='solid',
                           add2=NULL,
@@ -80,29 +80,36 @@ doseres.plot <- function(plotdata,
       geom_smooth(                                    
         aes(x=dose,y=y,ymin=lb,ymax=ub),
         color=col[1],fill=col[2],
-        data=plotdata, stat="identity",linetype=linetype)+
+        data=plotdata, stat="identity",linetype=linetype,size=1.5)+
       coord_cartesian(ylim = c(ymin, ymax))
   # add rug of observed doses
   g2 <- g1+geom_rug(data=data,mapping = aes(x=hayasaka_ddd),
-                   inherit.aes = F,col='royalblue4')
+                   inherit.aes = F
+                   ,col='royalblue4'
+                   )
   
   # change labs
   g3 <- g2 + ggplot2::labs(y=labs[1], x=labs[2])
   
   
   # edit the text size
-  g4 <- g3+theme(#panel.background = element_rect(fill = 'honeydew',colour = 'white'),
-    axis.text.x = element_text(face='bold',size=14),axis.text.y = element_text(face='bold',size=14),
-    axis.title.x=element_text(size=16,face = "bold"),axis.title.y=element_text(size=16,face = "bold"),
-    strip.background =element_rect(fill="snow3"),
-    strip.text.x = element_text(size = 16),
-    legend.text = element_text(size=12))
+  g4 <- g3+#+theme(
+    #panel.background = element_rect(fill = 'honeydew',colour = 'white'),
+    # axis.text.x = element_text(face='bold',size=16),axis.text.y = element_text(face='bold',size=14),
+    # axis.title.x=element_text(size=16,face = "bold"),axis.title.y=element_text(size=16,face = "bold"),
+    # #strip.background =element_rect(fill="snow3"),
+    # strip.text.x = element_text(size = 16),
+    # legend.text = element_text(size=12))+
+    theme_set(theme_minimal(
+      base_size = 30
+    ))
   
   if(!is.null(add2)){
     g.add2 <- g4+geom_smooth(                                    
       aes(x=dose,y=OR,ymin=lbo,ymax=ubo),
-      color='springgreen4',fill='lightgreen',
-      data=add2, stat="identity",linetype='dashed')
+      #color='darkred',fill='lightcoral',
+      color='grey17',fill='gray65',
+      data=add2, stat="identity",linetype='dashed',size=1.5)
     g.add <- g.add2
     
     if(!is.null(add3)){
@@ -120,7 +127,7 @@ doseres.plot <- function(plotdata,
   g <- g.add
   if(y=='prob'){
     # add placebo effect
-    g <- g+geom_hline(yintercept=plotdata$p.eff, color='red',linetype='dashed') # add placebo effect
+    g <- g+geom_hline(yintercept=plotdata$p.eff, color='grey25',linetype='dashed',size=1) # add placebo effect
   } else{
     g <- g
   }
@@ -139,7 +146,9 @@ dose_dist1 <- function(data=antidep){
     theme(axis.text.x=element_blank(),
           axis.ticks.x=element_blank(),
           strip.text.x = element_text(size = 16,family="serif"),
-          axis.text.y=element_text(size=12))
+          axis.text.y=element_text(size=12))+theme_set(
+            theme_minimal() 
+          )
 }
 
 

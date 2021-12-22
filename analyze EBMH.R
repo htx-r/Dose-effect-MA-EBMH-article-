@@ -52,9 +52,9 @@ rcs_1study <- dosresmeta(formula=logOR~rcs(hayasaka_ddd,knots),
                          data=study_87,
                          method = 'reml')
 summary(rcs_1study)
-print(waldtest(b=coef(rcs_1study)[2], 
+waldtest(b=coef(rcs_1study)[2], 
                Sigma=vcov(rcs_1study)[2,2],
-               Terms=1)) # wald test for spline coefficient
+               Terms=1) # wald test for spline coefficient
 # ---------- 1.multi-study analysis ----------
 # 1-stage
 rcs_pooled1 <- dosresmeta(formula=logOR~rcs(hayasaka_ddd,knots), 

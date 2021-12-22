@@ -74,26 +74,15 @@ ggplot(df, aes(hayasaka_ddd,vpc)) +
   annotate("rect", xmin = -Inf, xmax = Inf, ymin = 0.6, ymax = Inf, fill= "lightcoral", alpha=0.3) +
   theme_light()+
   geom_point() + 
+  labs(y="variance partition component (VPC)", x="Fluoxetine-equivalent dose")+
   geom_smooth(method = "loess",se=FALSE)+
   # ylim(0,0.9)+
   coord_cartesian(clip="off", ylim=c(0,0.9))+
-  theme(axis.title=element_blank(),
-        plot.margin = unit(c(5,10,10,5), "mm"))
+  theme(axis.title.x=element_text(size=16, face="bold"),
+        axis.title.y = element_text(size=16, face="bold"),
+        plot.margin = unit(c(5,10,10,5), "mm"),
+        axis.text.x = element_text(face='bold',size=14),axis.text.y = element_text(face='bold',size=14),)
 
-ggplot(df, aes(hayasaka_ddd,vpc)) + 
-  # annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = 0.3, fill= "darkseagreen2", alpha=0.3)  +
-  # theme_light()+
-  # annotate("rect", xmin = -Inf, xmax = Inf, ymin = 0.3, ymax = 0.6 , fill= "lightgoldenrod2", alpha=0.3) + 
-  # theme_light()+
-  # annotate("rect", xmin = -Inf, xmax = Inf, ymin = 0.6, ymax = Inf, fill= "lightcoral", alpha=0.3) +
-  # theme_light()+
-  coord_flip()+
-  geom_boxplot() + 
- geom_jitter(shape=16, position=position_jitter(0.2))+
-  # ylim(0,0.9)+
-  coord_cartesian(clip="off", ylim=c(0,0.9))+
-  theme(axis.title=element_blank(),
-        plot.margin = unit(c(5,10,10,5), "mm"))
 
 # appendix figure 1
 dose_dist1()
@@ -101,7 +90,14 @@ dose_dist1()
 # appendix figure 2
 dose_dist2()
 
+# 
+ggplot(df, aes(hayasaka_ddd,vpc)) + 
+  coord_flip()+
+  geom_boxplot() + 
+  geom_jitter(shape=16, position=position_jitter(0.2),color="slateblue4")+
+  coord_cartesian(clip="off", ylim=c(0,0.9))+
+  theme(axis.title=element_blank(),
+        plot.margin = unit(c(5,10,10,5), "mm"))
 # appendix table
 app.tab()
-
 
